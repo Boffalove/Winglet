@@ -8,8 +8,8 @@ function ml = naca_mean_line(NACA4, n_nodes, chord)
     p = P/10;
     m = M/100;
     
-%     x = linspace(0,chord,n_nodes);
-    x=chord*0.5*(1-cos(pi*linspace(0,1,n_nodes)));
+    x = linspace(0,chord,n_nodes);
+%     x=chord*0.5*(1-cos(pi*linspace(0,1,n_nodes)));
     x_lead = x(x<p*chord);
     x_trail = x(x>=p*chord);
     ml(1,:) = x;
