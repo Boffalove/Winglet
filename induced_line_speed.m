@@ -1,4 +1,5 @@
 function V = induced_line_speed(line,gamma,point)
+% Line = [ fine_vortice  inizio_vortice]
 % calcola la velocità indotta da un anello vorticoso avente intensità gamma
 % nel punto / nei punti descritti da point
 %
