@@ -10,4 +10,7 @@ function [N,T] = versori(wing)
         end
     end
     T=0;
+	
+	
+	cacca = 1;
 end
