@@ -38,7 +38,7 @@ Vv(:,na,:) = induced_line_speed([Xa(1:end-1,na,:), Xa(2:end,na,:)], ones(ma-1,1)
 
 
 [V,v]= Assemblaggio(Vv,Vh,Gamma);
-vv(:)=v(1,1,:);
+vv=v(1,1,:);
 
 
 end

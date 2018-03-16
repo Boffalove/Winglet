@@ -15,6 +15,7 @@ function V = induced_line_speed(line,gamma,point)
     % else
     [riga1,colonna1] = find(sqrt(sum(r1.^2,3))==0);
     [riga2,colonna2] = find(sqrt(sum(r2.^2,3))==0);
+    [riga3,colonna3] = find(sqrt(sum(cross(r1,r2,3).^2,3))==0);
 
     num =(sqrt(sum(r1.^2,3))+sqrt(sum(r2.^2,3))).*cross(r1,r2,3);
     den = sqrt(sum(r1.^2,3)).*sqrt(sum(r2.^2,3)).*...
@@ -27,12 +28,15 @@ function V = induced_line_speed(line,gamma,point)
                 sqrt(sum(cross(r1,r2,3).^2,3));
     corr = 1 + corr1 + corr2;
     
-    V = gamma./(4*pi)*num./(den.*corr);
+    V = gamma/(4*pi).*num./(den.*corr);
     
     if ~isempty(riga1)
-        V(riga1,colonna1,:) = zeros(size(riga1,2),size(colonna1,2),3);
+        V(riga1,colonna1,:) = zeros(size(riga1,1),size(colonna1,1),3);
     end
     if ~isempty(riga2)
-        V(riga2,colonna2,:) = zeros(size(riga2,2),size(colonna2,2),3);
+        V(riga2,colonna2,:) = zeros(size(riga2,1),size(colonna2,1),3);
     end   
+    if ~isempty(riga3)
+        V(riga3,colonna3,:) = zeros(size(riga3,1),size(colonna3,1),3);
+    end 
 end

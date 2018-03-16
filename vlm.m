@@ -6,9 +6,9 @@ naca = 4412;
 wing_root = 1;
 wing_tip = 1;
 wing_span = 10;
-n_chord = 20;
-n_span = 50;
-wing_sweep = deg2rad(15);
+n_chord = 10;
+n_span = 10;
+wing_sweep = deg2rad(0);
 wing_twist = deg2rad(0);
 
 % winglet
@@ -25,7 +25,7 @@ up = 1; % 1 --> winglet verso l'alto
          
 V_inf = zeros(n_chord-1,n_span-1,3);
 V_inf(:,:,1) = -1;
-V_inf(:,:,3) = .1;
+V_inf(:,:,3) = 0.1;
          
 %% code
 Wing = build_wing(wing_root,wing_tip,wing_span,n_chord,n_span,naca,...
@@ -56,7 +56,9 @@ p_controllo = collocazione(Wing);
 %                                           T(:,:,1),T(:,:,2),T(:,:,3),'y')
 
 %% risoluzione sistema lineare
+tic
 [~,A] = Induzione(Wing,p_controllo,N,ones(size(N,1),size(N,2)));
+toc
 B = -dot(V_inf,N,3)';
 b = B(:);
 
@@ -78,5 +80,19 @@ V = Induzione(Wing,p_controllo,N,gamma);
 cp = 1-(sqrt(sum((V+V_inf).^2,3)).^2./sqrt(sum(V_inf.^2,3))).^2;
 figure(300)
 surf(p_controllo(:,:,1),p_controllo(:,:,2),p_controllo(:,:,3),cp)
+axis equal
+colorbar
+
+
+%%
+[lines,g_lines] = build_lines(Wing,gamma);
+for i = 1:size(p_controllo,1)
+    for j = 1: size(p_controllo,2)
+        Vl(i,j,:) = sum(induced_line_speed(lines,g_lines,p_controllo(i,j,:)),1);
+    end
+end
+cpl = 1-(sqrt(sum((Vl+V_inf).^2,3)).^2./sqrt(sum(V_inf.^2,3))).^2;
+figure(400)
+surf(p_controllo(:,:,1),p_controllo(:,:,2),p_controllo(:,:,3),cpl)
 axis equal
 colorbar
