@@ -59,7 +59,7 @@ function VV = chord_induced(vortex,gamma,point)
     % viscoso) che serve per "simulare" l'effetto del core allontanado il
     % punto in modo artificiale
     
-    k = 1e-2; %parametro modificabile
+    k = 0; %parametro modificabile
     
     % sviluppato analiticamente per ottenere una forma di più facile
     % implementazione numerica
