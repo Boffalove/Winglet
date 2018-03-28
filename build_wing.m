@@ -6,9 +6,9 @@ function wing = build_wing(root_chord, tip_chord, span, n_chord,...
         NACAs = repmat(NACAs,1,n_span);
     end
     chord_vect = linspace(root_chord, tip_chord, n_span);
+%     yy=span*0.5*(1-cos(pi*linspace(0,1,n_span)));
     
-    yy=span*0.5*(1-cos(pi*linspace(0,1,n_span)));
-    %yy = linspace(0,span, n_span);
+    yy = linspace(0,span, n_span);
     
     for i = 1:n_span
         ml = naca_mean_line(NACAs(i), n_chord, chord_vect(i));
@@ -31,7 +31,7 @@ function wing = build_wing(root_chord, tip_chord, span, n_chord,...
     wing(:,:,1) = wing(:,:,1) + repmat((root_chord -chord_vect)/2,n_chord,1);
     % aggiungo lo sweep 
     wing(:,:,1) = wing(:,:,1) + yy*sin(sweep);
-    wing(:,:,2) = repmat(yy,n_chord,1);
+    wing(:,:,2) = repmat(yy,n_chord,1).*cos(sweep);
 
     if nargin >= 9
         old_wing = varargin{1};

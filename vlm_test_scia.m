@@ -2,12 +2,12 @@
 clear all
 close all
 
-naca = 4412;
+naca = 2312;
 wing_root = 1;
 wing_tip = 1;
 wing_span = 10;
-n_chord = 30;
-n_span = 10;
+n_chord = 10;
+n_span = 30;
 wing_sweep = deg2rad(0);
 wing_twist = deg2rad(0);
 
@@ -27,7 +27,7 @@ V_inf = zeros(n_chord-1,n_span-1,3);
 V_inf(:,:,1) = -1;
 V_inf(:,:,3) = .1;
 
-dt = 1;
+dt = .05;
          
 %% code
 Wing = build_wing(wing_root,wing_tip,wing_span,n_chord,n_span,naca,...
@@ -75,15 +75,12 @@ V_wake = repmat(-V_inf(1,1,:),1,size(Wing,2),1)+V_wake;
 wake = [Wing(end,:,:);Wing(end,:,:)+V_wake*dt];
 g_wake = gamma(end,:);
 
-% figure(350)
-% surf(Wing(:,:,1),Wing(:,:,2),Wing(:,:,3))
-% hold on
-% axis equal
-% plot3(wake(:,:,1),wake(:,:,2),wake(:,:,3),'r*')
+
 
 
 
 %% ciclo temporale
+tic
 for t = 1:50
     % risolvo sitema lineare
     V_sa = zeros(size(p_controllo));
@@ -106,3 +103,10 @@ for t = 1:50
     g_wake = [gamma(end,:); g_wake];
     
 end
+toc
+%%
+% figure(350)
+surf(Wing(:,:,1),Wing(:,:,2),Wing(:,:,3))
+hold on
+axis equal
+plot3(wake(:,:,1),wake(:,:,2),wake(:,:,3),'r*')
