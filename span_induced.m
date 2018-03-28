@@ -12,7 +12,7 @@ function VV = span_induced(vortex,gamma,point)
     if numel(gamma ==1) % coefficienti d'influenza
        gamma_c = ones(size(vortex,1),size(vortex,2)-1);
     else % la gamma è gia quella data
-        gamma_c = gamma; gamma_c(2:end,:) = +gamma_c(2:end,:)-gamma_c(1:end-1,:);
+        gamma_c = gamma; gamma_c(2:end,:) = gamma_c(2:end,:)-gamma_c(1:end-1,:);
         gamma_c(end+1) = gamma(end,:);
     end
     % estraggo i segmenti, presi tutti nella stessa direzione (verso il
@@ -82,8 +82,9 @@ function VV = span_induced(vortex,gamma,point)
        VV = ricostruzione_ind_vortice(V);
     
     else % restituisco la velocità indotta dai segmenti chordwise
-    
-       VV = sum(V,1);
+       V = reshape(V,size(vortex,1),size(vortex,2)-1,3);
+       VV = ricostruzione_ind_vortice(V);
+       VV = sum(sum(VV));
     end
 end
 

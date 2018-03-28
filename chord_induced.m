@@ -30,7 +30,7 @@ function VV = chord_induced(vortex,gamma,point)
     %punto iniziale
     line_s = reshape(vortex(2:end,:,:),(size(vortex,1)-1)*...
                                         (size(vortex,2)),1,3);
-                          
+                                    
     gamma_c = reshape(gamma_c,numel(gamma_c),1);
     
     % costriusco il segmento
@@ -93,7 +93,9 @@ function VV = chord_induced(vortex,gamma,point)
        VV = ricostruzione_ind_vortice(V);
       
     else % restituisco la velocità indotta dai segmenti chordwise
-       VV = sum(V,1);
+       V = reshape(V,size(vortex,1)-1,size(vortex,2),3);
+       VV = ricostruzione_ind_vortice(V);
+       VV = sum(sum(VV));
     end
     
 end
