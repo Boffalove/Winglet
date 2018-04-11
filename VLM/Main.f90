@@ -49,7 +49,7 @@ NULLIFY (headPanel, tailPanel, headVortex, tailVortex, &
          headWake, tailWake)   !Devo annullare i pointer in modo che essi non abbiano uno stato ambiguo!
 
 !Reading Data
-OPEN (UNIT=10, FILE='Data', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat1)
+OPEN (UNIT=10, FILE='Data.dat', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat1)
 OPEN (UNIT=20, FILE='X.dat', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat2)
 OPEN (UNIT=30, FILE='Y.dat', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat3)
 OPEN (UNIT=40, FILE='Z.dat', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat4)
@@ -228,9 +228,9 @@ ENDDO
 DEALLOCATE(ptr1, ptr2, ptr3)
 
 !Provo a scrivere su file
-OPEN (UNIT=50, FILE='Xc', STATUS='old ', ACTION='WRITE', IOSTAT=OpenStat2)
-!OPEN (UNIT=60, FILE='N', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
-!OPEN (UNIT=90, FILE='Xvor', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
+OPEN (UNIT=50, FILE='Xc.dat', STATUS='unknown ', ACTION='WRITE', IOSTAT=OpenStat2)
+!OPEN (UNIT=60, FILE='N.dat', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
+!OPEN (UNIT=90, FILE='Xvor.dat', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
 
 !i=1
 !pVortex => headVortex
@@ -307,12 +307,12 @@ allocate(pivot(1:m*n))
 CALL SGESV(m*n, 1, A, m*n,pivot, noto, m*n, info)
 write(*,*) 'info=', info
 
-OPEN (UNIT=90, FILE='gamma', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
+OPEN (UNIT=90, FILE='gamma.dat', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
 write(90,*) noto
 
 
 !Calcolo le velocità nei punti di controllo per vedere se sono tangenti
-OPEN (UNIT=100, FILE='Vel', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
+OPEN (UNIT=100, FILE='Vel.dat', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
 ALLOCATE(vel(3))
 vel = 0
 i = 1
