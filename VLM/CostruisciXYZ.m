@@ -19,7 +19,7 @@ x=Wing(:,:,1);
 y=Wing(:,:,2);
 z=Wing(:,:,3);
 
-save X x
-save Y y
-save Z z
+save X.dat x -ascii
+save Y.dat y -ascii
+save Z.dat z -ascii
 

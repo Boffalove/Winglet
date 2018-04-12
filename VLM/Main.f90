@@ -8,27 +8,32 @@ IMPLICIT NONE
 INTEGER :: OpenStat1, OpenStat2, OpenStat3, OpenStat4, &             !Questi servono per controllare l'apertura dei file
             AllocStat, ptrStat1, ptrStat2
 INTEGER :: m, n                                                      !Numero pannelli in corda, numero pannelli in (semi)apertura
-REAL :: b, alpha, WingArea, liftCoeff
+REAL :: b, alpha, WingArea, liftCoeff, Cdi
 INTEGER :: Re
-REAL, DIMENSION(3) :: Uinf                                              
+REAL, DIMENSION(3) :: Uinf, f, cf                                              
 REAL, ALLOCATABLE, DIMENSION(:,:,:), TARGET :: Nodes                 !Contiene le coordinate dei pannelli
 INTEGER :: i, j  
 INTEGER, ALLOCATABLE, DIMENSION(:) :: pivot                                                 
 REAL, DIMENSION(:,:,:), POINTER :: ptr0, ptr1, ptr2, ptr3, temp
 REAL, DIMENSION(:,:), POINTER :: A
-REAL, DIMENSION(:), POINTER :: noto, u, u_, uw, uw_, vel
+REAL, DIMENSION(:), POINTER :: noto, u, u_, uw, uw_, vel, f1, f2, f3, &
+                               u1, u2, u_1, u_2, uw1, uw2, uw_1, uw_2, &
+                               vel1, vel2
                                
 TYPE :: panel
    REAL, DIMENSION(3) :: N
    REAL, DIMENSION(3) :: Pctrl
+   REAL :: DxL
+   REAL :: DxR
    REAL :: Dy
    REAL :: gammaBound
    REAL :: gammaLeft
+   REAL :: gammaRight
    REAL :: S
    TYPE(panel), POINTER :: ptrPanel
 END TYPE panel
-TYPE (panel), POINTER :: headPanel
-TYPE (panel), POINTER :: tailPanel
+TYPE (panel), POINTER :: headPanel, testaPanel
+TYPE (panel), POINTER :: tailPanel, codaPanel
 TYPE (panel), POINTER :: pPanel, pPanelInner
 
 TYPE :: vortex
@@ -37,7 +42,7 @@ TYPE :: vortex
 END TYPE vortex
 TYPE (vortex), POINTER :: headVortex
 TYPE (vortex), POINTER :: tailVortex
-TYPE (vortex), POINTER :: pVortex
+TYPE (vortex), POINTER :: pVortex, pVor
 
 TYPE (vortex), POINTER :: headWake
 TYPE (vortex), POINTER :: tailWake
@@ -178,6 +183,8 @@ DO i=1,m
       tailPanel%Pctrl(2) = (ptr2(i,j,2) + ptr2(i,j+1,2))/2
       tailPanel%Pctrl(3) = (ptr2(i,j,3) + ptr2(i,j+1,3))/2
 
+      tailPanel%DxL = NORM2(tailVortex%vertici(2,1,:)-tailVortex%vertici(1,1,:))
+      tailPanel%DxR = NORM2(tailVortex%vertici(2,2,:)-tailVortex%vertici(1,2,:))
       tailPanel%Dy = NORM2(tailVortex%vertici(1,2,:)-tailVortex%vertici(1,1,:))
 
       tailPanel%S = ( NORM2(ptr0(i+1,j,:)-ptr0(i,j,:)) + NORM2(ptr0(i+1,j+1,:)-ptr0(i,j+1,:)) ) * &
@@ -195,6 +202,8 @@ DO i=1,m
       tailPanel%Pctrl(2) = (ptr2(i,j,2) + ptr2(i,j+1,2))/2
       tailPanel%Pctrl(3) = (ptr2(i,j,3) + ptr2(i,j+1,3))/2
 
+      tailPanel%DxL = NORM2(tailVortex%vertici(2,1,:)-tailVortex%vertici(1,1,:))
+      tailPanel%DxR = NORM2(tailVortex%vertici(2,2,:)-tailVortex%vertici(1,2,:))
       tailPanel%Dy = NORM2(tailVortex%vertici(1,2,:)-tailVortex%vertici(1,1,:))
 
       tailPanel%S = ( NORM2(ptr0(i+1,j,:)-ptr0(i,j,:)) + NORM2(ptr0(i+1,j+1,:)-ptr0(i,j+1,:)) ) * &
@@ -228,7 +237,7 @@ ENDDO
 DEALLOCATE(ptr1, ptr2, ptr3)
 
 !Provo a scrivere su file
-OPEN (UNIT=50, FILE='Xc', STATUS='old ', ACTION='WRITE', IOSTAT=OpenStat2)
+OPEN (UNIT=50, FILE='Xc', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
 !OPEN (UNIT=60, FILE='N', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
 !OPEN (UNIT=90, FILE='Xvor', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
 
@@ -241,7 +250,7 @@ DO
    IF (.NOT. ASSOCIATED(pPanel)) EXIT
 !      WRITE(*,*) pVortex%vertici(1,1,:), pVortex%vertici(1,2,:)
       WRITE(50,*) pPanel%Pctrl
-      WRITE(*,*) 'Dy=', pPanel%Dy
+!      WRITE(*,*) 'DxL=', pPanel%DxL, 'DxR=', pPanel%DxR
 !      IF (i>=m*n-n+1) then
 !         write(*,*) pWake%vertici(1,1,:), pWake%vertici(1,2,:)
 !         write(*,*) pWake%vertici(2,1,:), pWake%vertici(2,2,:)
@@ -307,65 +316,11 @@ allocate(pivot(1:m*n))
 CALL SGESV(m*n, 1, A, m*n,pivot, noto, m*n, info)
 write(*,*) 'info=', info
 
-OPEN (UNIT=90, FILE='gamma', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
+OPEN (UNIT=90, FILE='gamma', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
 write(90,*) noto
 
-
-!Calcolo le velocità nei punti di controllo per vedere se sono tangenti
-OPEN (UNIT=100, FILE='Vel', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
-ALLOCATE(vel(3))
-vel = 0
-i = 1
+!Distribuisco i valori di gamma ai rispettivi segmenti vorticosi
 j = 1
-pPanel => headPanel
-DO
-   IF (.NOT. ASSOCIATED(pPanel)) EXIT
-   pVortex => headVortex
-   pWake => headWake
-   DO
-      IF (.NOT. ASSOCIATED(pVortex)) EXIT
-      CALL VortexRing( pVortex%vertici(1,1,:), pVortex%vertici(1,2,:), &
-                       pVortex%vertici(2,2,:), pVortex%vertici(2,1,:), &
-                       pPanel%Pctrl, noto(j), u)
-
-      CALL VortexRing( (/pVortex%vertici(1,1,1), -pVortex%vertici(1,1,2), pVortex%vertici(1,1,3)/), &
-                       (/pVortex%vertici(1,2,1), -pVortex%vertici(1,2,2), pVortex%vertici(1,2,3)/), &
-                       (/pVortex%vertici(2,2,1), -pVortex%vertici(2,2,2), pVortex%vertici(2,2,3)/), &
-                       (/pVortex%vertici(2,1,1), -pVortex%vertici(2,1,2), pVortex%vertici(2,1,3)/), &
-                         pPanel%Pctrl, noto(j), u_ )
-
-      IF (j >= n*(m-1)+1) THEN
-         CALL VortexRing( pWake%vertici(1,1,:), pWake%vertici(1,2,:), &
-                          pWake%vertici(2,2,:), pWake%vertici(2,1,:), &
-                          pPanel%Pctrl, noto(j), uw)
-         CALL VortexRing( (/pWake%vertici(1,1,1), -pWake%vertici(1,1,2), pWake%vertici(1,1,3)/), &
-                       (/pWake%vertici(1,2,1), -pWake%vertici(1,2,2), pWake%vertici(1,2,3)/), &
-                       (/pWake%vertici(2,2,1), -pWake%vertici(2,2,2), pWake%vertici(2,2,3)/), &
-                       (/pWake%vertici(2,1,1), -pWake%vertici(2,1,2), pWake%vertici(2,1,3)/), &
-                         pPanel%Pctrl, noto(j), uw_ )
-         pWake => pWake%ptrVortex
-      ELSE
-         uw = 0.
-         uw_ = 0.
-      ENDIF
-      vel = vel + u - u_ + uw - uw_
-      pVortex => pVortex%ptrVortex
-      j = j + 1
-   ENDDO
-   WRITE(100,*) vel + Uinf
-   vel = 0
-   pPanel => pPanel%ptrPanel
-   i = i + 1
-   j = 1
-ENDDO
-!Bombazza!!
-
-!Inserisco il valore di gamma del bound vortex di ogni pannello nella linked list dei pannelli
-!Calcolo anche CL per vedere
-i = 1
-j = 1
-liftCoeff = 0
-WingArea = b/2
 pPanel => headPanel
 pPanelInner => headPanel
 DO
@@ -379,22 +334,142 @@ DO
       pPanelInner => pPanelInner%ptrPanel
       pPanel => pPanel%ptrPanel
    ENDIF
-
-   IF (MOD(j/n) == 0) THEN
-      i = i + 1
-      pPanel%gammaLeft = noto(j+1)
-   END
-
-   write(*,*) 'gami-(i-i)=', pPanel%gammaBound
-   liftCoeff = liftCoeff + pPanel%gammaBound * pPanel%S
-   
    j = j + 1
 ENDDO
-liftCoeff = 2*liftCoeff/(NORM2(Uinf)*WingArea)
-write(*,*) 'Cl=', liftCoeff
+
+testaPanel => headPanel
+testaPanel%gammaLeft = noto(1)
+pPanel => headPanel%ptrPanel
+j = 2
+i = 1
+DO
+   IF ( MOD((j+1), n) == 0 ) THEN
+      pPanel%gammaLeft = noto(j) - noto(j-1)
+      codaPanel => pPanel%ptrPanel
+      codaPanel%gammaLeft = noto(j+1) - noto(j)
+      codaPanel%gammaRight = noto(j+1)
+      testaPanel => codaPanel%ptrPanel      
+      IF ( .NOT. ASSOCIATED(testaPanel) ) EXIT
+      pPanel => testaPanel%ptrPanel
+      j = j + 2
+      testaPanel%gammaLeft = noto(j)
+      i = i + 1
+      j = j + 1
+      
+   ELSE
+      pPanel%gammaLeft = noto(j) - noto(j-1)
+      pPanel => pPanel%ptrPanel
+      j = j + 1
+   ENDIF
+
+ENDDO
+
+
+!Calcolo le velocità nei punti di controllo per vedere se sono tangenti
+OPEN (UNIT=100, FILE='Vel', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
+ALLOCATE(vel1(3), vel2(3), u1(3), u2(3), u_1(3), u_2(3), &
+                  uw1(3), uw2(3), uw_1(3), uw_2(3), &
+                  f1(3), f2(3), f3(3))
+WingArea = b
+vel1 = 0; vel2 = 0
+f = 0
+i = 1
+j = 1
+pPanel => headPanel
+pVor => headVortex
+DO
+   IF (.NOT. ASSOCIATED(pPanel)) EXIT
+   pVortex => headVortex
+   pWake => headWake
+   DO
+      IF (.NOT. ASSOCIATED(pVortex)) EXIT
+!      CALL VortexRing( pVortex%vertici(1,1,:), pVortex%vertici(1,2,:), &
+!                       pVortex%vertici(2,2,:), pVortex%vertici(2,1,:), &
+!                       pPanel%Pctrl, noto(j), u)
+
+      CALL VortexRing( pVortex%vertici(1,1,:), pVortex%vertici(1,2,:), &
+                 pVortex%vertici(2,2,:), pVortex%vertici(2,1,:), &
+                 (pVor%vertici(1,1,:)+pVor%vertici(1,2,:))/2, noto(j), u1)
+      CALL VortexRing( pVortex%vertici(1,1,:), pVortex%vertici(1,2,:), &
+                 pVortex%vertici(2,2,:), pVortex%vertici(2,1,:), &
+                 (pVor%vertici(1,1,:)+pVor%vertici(2,1,:))/2, noto(j), u2)
+
+!      CALL VortexRing( (/pVortex%vertici(1,1,1), -pVortex%vertici(1,1,2), pVortex%vertici(1,1,3)/), &
+!                       (/pVortex%vertici(1,2,1), -pVortex%vertici(1,2,2), pVortex%vertici(1,2,3)/), &
+!                       (/pVortex%vertici(2,2,1), -pVortex%vertici(2,2,2), pVortex%vertici(2,2,3)/), &
+!                       (/pVortex%vertici(2,1,1), -pVortex%vertici(2,1,2), pVortex%vertici(2,1,3)/), &
+!                         pPanel%Pctrl, noto(j), u_ )
+
+      CALL VortexRing( (/pVortex%vertici(1,1,1), -pVortex%vertici(1,1,2), pVortex%vertici(1,1,3)/), &
+                       (/pVortex%vertici(1,2,1), -pVortex%vertici(1,2,2), pVortex%vertici(1,2,3)/), &
+                       (/pVortex%vertici(2,2,1), -pVortex%vertici(2,2,2), pVortex%vertici(2,2,3)/), &
+                       (/pVortex%vertici(2,1,1), -pVortex%vertici(2,1,2), pVortex%vertici(2,1,3)/), &
+                        (pVor%vertici(1,1,:)+pVor%vertici(1,2,:))/2, noto(j), u_1 )
+      CALL VortexRing( (/pVortex%vertici(1,1,1), -pVortex%vertici(1,1,2), pVortex%vertici(1,1,3)/), &
+                       (/pVortex%vertici(1,2,1), -pVortex%vertici(1,2,2), pVortex%vertici(1,2,3)/), &
+                       (/pVortex%vertici(2,2,1), -pVortex%vertici(2,2,2), pVortex%vertici(2,2,3)/), &
+                       (/pVortex%vertici(2,1,1), -pVortex%vertici(2,1,2), pVortex%vertici(2,1,3)/), &
+                        (pVor%vertici(1,1,:)+pVor%vertici(2,1,:))/2, noto(j), u_2 )
+
+      IF (j >= n*(m-1)+1) THEN
+!         CALL VortexRing( pWake%vertici(1,1,:), pWake%vertici(1,2,:), &
+!                          pWake%vertici(2,2,:), pWake%vertici(2,1,:), &
+!                          pPanel%Pctrl, noto(j), uw)
+         CALL VortexRing( pWake%vertici(1,1,:), pWake%vertici(1,2,:), &
+                          pWake%vertici(2,2,:), pWake%vertici(2,1,:), &
+                         (pVor%vertici(1,1,:)+pVor%vertici(1,2,:))/2, noto(j), uw1)
+         CALL VortexRing( pWake%vertici(1,1,:), pWake%vertici(1,2,:), &
+                          pWake%vertici(2,2,:), pWake%vertici(2,1,:), &
+                         (pVor%vertici(1,1,:)+pVor%vertici(2,1,:))/2, noto(j), uw2)
+
+!         CALL VortexRing( (/pWake%vertici(1,1,1), -pWake%vertici(1,1,2), pWake%vertici(1,1,3)/), &
+!                       (/pWake%vertici(1,2,1), -pWake%vertici(1,2,2), pWake%vertici(1,2,3)/), &
+!                       (/pWake%vertici(2,2,1), -pWake%vertici(2,2,2), pWake%vertici(2,2,3)/), &
+!                       (/pWake%vertici(2,1,1), -pWake%vertici(2,1,2), pWake%vertici(2,1,3)/), &
+!                         pPanel%Pctrl, noto(j), uw_ )
+         CALL VortexRing( (/pWake%vertici(1,1,1), -pWake%vertici(1,1,2), pWake%vertici(1,1,3)/), &
+                       (/pWake%vertici(1,2,1), -pWake%vertici(1,2,2), pWake%vertici(1,2,3)/), &
+                       (/pWake%vertici(2,2,1), -pWake%vertici(2,2,2), pWake%vertici(2,2,3)/), &
+                       (/pWake%vertici(2,1,1), -pWake%vertici(2,1,2), pWake%vertici(2,1,3)/), &
+                        (pVor%vertici(1,1,:)+pVor%vertici(1,2,:))/2, noto(j), uw_1 )
+         CALL VortexRing( (/pWake%vertici(1,1,1), -pWake%vertici(1,1,2), pWake%vertici(1,1,3)/), &
+                       (/pWake%vertici(1,2,1), -pWake%vertici(1,2,2), pWake%vertici(1,2,3)/), &
+                       (/pWake%vertici(2,2,1), -pWake%vertici(2,2,2), pWake%vertici(2,2,3)/), &
+                       (/pWake%vertici(2,1,1), -pWake%vertici(2,1,2), pWake%vertici(2,1,3)/), &
+                        (pVor%vertici(1,1,:)+pVor%vertici(2,1,:))/2, noto(j), uw_2 )
+         pWake => pWake%ptrVortex
+      ELSE
+         uw = 0.
+         uw_ = 0.
+      ENDIF
+      vel1 = vel1 + u1 - u_1 + uw1 - uw_1
+      vel2 = vel2 + u2 - u_2 + uw2 - uw_2
+      pVortex => pVortex%ptrVortex
+      j = j + 1
+   ENDDO
+   WRITE(100,*) vel2 + Uinf
+
+   CALL cross(Uinf+vel1, pVor%vertici(1,2,:)-pVor%vertici(1,1,:), f1)
+   CALL cross(Uinf, pVor%vertici(2,2,:)-pVor%vertici(1,2,:), f2)
+   CALL cross(Uinf + vel2, pVor%vertici(1,1,:)-pVor%vertici(2,1,:), f3)
+   f = f + f1*pPanel%gammaBound + f2*pPanel%gammaRight + f3*pPanel%gammaLeft    
+   vel1 = 0; vel2 = 0
+   pPanel => pPanel%ptrPanel
+   pVor => pVor%ptrVortex
+   i = i + 1
+   j = 1
+ENDDO
+!Bombazza!!
+
+cf = 2*f/(NORM2(Uinf)**2 * WingArea)
+
+liftCoeff = cf(1)*sin(alpha) + cf(3)*cos(alpha)
+Cdi = cf(1)*cos(alpha) + cf(3)*sin(alpha)
+write(*,*) 'cf=', cf
+write(*,*) 'Cl = ', liftCoeff, 'Cdi = ', Cdi  
+
 
 END PROGRAM Main
-
 
 
 MODULE Subroutines
@@ -458,14 +533,5 @@ CONTAINS
 
 
 END MODULE Subroutines
-
-
-
-
-
-
-
-
-
 
 
