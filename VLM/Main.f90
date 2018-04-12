@@ -54,7 +54,7 @@ NULLIFY (headPanel, tailPanel, headVortex, tailVortex, &
          headWake, tailWake)   !Devo annullare i pointer in modo che essi non abbiano uno stato ambiguo!
 
 !Reading Data
-OPEN (UNIT=10, FILE='Data', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat1)
+OPEN (UNIT=10, FILE='Data.dat', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat1)
 OPEN (UNIT=20, FILE='X.dat', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat2)
 OPEN (UNIT=30, FILE='Y.dat', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat3)
 OPEN (UNIT=40, FILE='Z.dat', STATUS='OLD', ACTION='READ', IOSTAT=OpenStat4)
@@ -237,9 +237,15 @@ ENDDO
 DEALLOCATE(ptr1, ptr2, ptr3)
 
 !Provo a scrivere su file
+<<<<<<< HEAD
 OPEN (UNIT=50, FILE='Xc', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
 !OPEN (UNIT=60, FILE='N', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
 !OPEN (UNIT=90, FILE='Xvor', STATUS='old', ACTION='WRITE', IOSTAT=OpenStat2)
+=======
+OPEN (UNIT=50, FILE='Xc.dat', STATUS='unknown ', ACTION='WRITE', IOSTAT=OpenStat2)
+!OPEN (UNIT=60, FILE='N.dat', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
+!OPEN (UNIT=90, FILE='Xvor.dat', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
+>>>>>>> 0e6f0ce17c3778b0dd5220a7dbf078e7cb807f7d
 
 !i=1
 !pVortex => headVortex
@@ -316,7 +322,11 @@ allocate(pivot(1:m*n))
 CALL SGESV(m*n, 1, A, m*n,pivot, noto, m*n, info)
 write(*,*) 'info=', info
 
+<<<<<<< HEAD
 OPEN (UNIT=90, FILE='gamma', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
+=======
+OPEN (UNIT=90, FILE='gamma.dat', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
+>>>>>>> 0e6f0ce17c3778b0dd5220a7dbf078e7cb807f7d
 write(90,*) noto
 
 !Distribuisco i valori di gamma ai rispettivi segmenti vorticosi
@@ -366,6 +376,7 @@ ENDDO
 
 
 !Calcolo le velocità nei punti di controllo per vedere se sono tangenti
+<<<<<<< HEAD
 OPEN (UNIT=100, FILE='Vel', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
 ALLOCATE(vel1(3), vel2(3), u1(3), u2(3), u_1(3), u_2(3), &
                   uw1(3), uw2(3), uw_1(3), uw_2(3), &
@@ -373,6 +384,11 @@ ALLOCATE(vel1(3), vel2(3), u1(3), u2(3), u_1(3), u_2(3), &
 WingArea = b
 vel1 = 0; vel2 = 0
 f = 0
+=======
+OPEN (UNIT=100, FILE='Vel.dat', STATUS='unknown', ACTION='WRITE', IOSTAT=OpenStat2)
+ALLOCATE(vel(3))
+vel = 0
+>>>>>>> 0e6f0ce17c3778b0dd5220a7dbf078e7cb807f7d
 i = 1
 j = 1
 pPanel => headPanel
